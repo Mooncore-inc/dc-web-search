@@ -1,12 +1,15 @@
 import httpx
 
-from demon_cry_base import BaseModule
+from demon_cry_base import BaseModule, ModuleConfig
 
+class WebSearchConfig(ModuleConfig):
+    searxng_url: str = "http://localhost:8080"
 
 class WebSearch(BaseModule):
     name: str = "web_search"
     description: str = "Search web via SearXNG. Supports Google dorks (site:, filetype:)"
     category: str = "search"
+    config_model = WebSearchConfig
     parameters: dict = {
         "type": "object",
         "properties": {
@@ -27,7 +30,7 @@ class WebSearch(BaseModule):
         "required": ["query"]
     }
 
-    async def execute(self, config: dict, query: str, category: str = "general", time_range: str = "all") -> dict:
+    async def execute(self, config: WebSearchConfig, query: str, category: str = "general", time_range: str = "all") -> dict:
         try:
             params = {
                 "q": query,
@@ -39,7 +42,7 @@ class WebSearch(BaseModule):
 
             async with httpx.AsyncClient(timeout=15.0) as client:
                 response = await client.get(
-                    f"{config.get("searxng_url")}/search",
+                    f"{config.searxng_url}/search",
                     params=params,
                 )
                 response.raise_for_status()

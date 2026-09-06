@@ -25,15 +25,7 @@ services:
     restart: unless-stopped
 ```
 
-2. Создать файл конфигурации `modules/web_search/config.json`:
-
-```json
-{
-    "searxng_url": "http://localhost:8080"
-}
-```
-
-3. Поднять SearXNG:
+2. Поднять SearXNG:
 
 ```bash
 docker compose up -d
