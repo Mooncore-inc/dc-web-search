@@ -1,49 +1,45 @@
 import httpx
 
-from demon_cry_base import BaseModule, ModuleConfig
+from typing import Literal
+from pydantic import Field
+from demon_cry_base import BaseModule, ModuleConfig, ModuleParameters
+
+class WebSearchParams(ModuleParameters):
+    query: str = Field(description="Search query (supports Google dorks)")
+    category: Literal["general", "images", "files", "it", "social media", "news"] = Field(
+        default="general",
+        description="Search category"
+    )
+    time_range: Literal["day", "week", "month", "year", "all"] = Field(
+        default="all",
+        description="Time filter"
+    )
+
 
 class WebSearchConfig(ModuleConfig):
     searxng_url: str = "http://localhost:8080"
 
 class WebSearch(BaseModule):
-    name: str = "web_search"
-    description: str = "Search web via SearXNG. Supports Google dorks (site:, filetype:)"
-    category: str = "search"
+    name = "web_search"
+    description = "Search web via SearXNG. Supports Google dorks (site:, filetype:)"
+    category = "search"
     config_model = WebSearchConfig
-    parameters: dict = {
-        "type": "object",
-        "properties": {
-            "query": {"type": "string", "description": "Search query (supports Google dorks)"},
-            "category": {
-                "type": "string",
-                "enum": ["general", "images", "files", "it", "social media", "news"],
-                "default": "general",
-                "description": "Search category"
-            },
-            "time_range": {
-                "type": "string",
-                "enum": ["day", "week", "month", "year", "all"],
-                "default": "all",
-                "description": "Time filter"
-            }
-        },
-        "required": ["query"]
-    }
+    parameters_model = WebSearchParams
 
-    async def execute(self, config: WebSearchConfig, query: str, category: str = "general", time_range: str = "all") -> dict:
+    async def execute(self, config: WebSearchConfig, params: WebSearchParams) -> dict:
         try:
-            params = {
-                "q": query,
+            request_params = {
+                "q": params.query,
                 "format": "json",
-                "categories": category,
+                "categories": params.category,
             }
-            if time_range and time_range != "all":
-                params["time_range"] = time_range
+            if params.time_range and params.time_range != "all":
+                request_params["time_range"] = params.time_range
 
             async with httpx.AsyncClient(timeout=15.0) as client:
                 response = await client.get(
                     f"{config.searxng_url}/search",
-                    params=params,
+                    params=request_params,
                 )
                 response.raise_for_status()
 
@@ -63,9 +59,9 @@ class WebSearch(BaseModule):
                 })
 
             resp = {
-                "query": query,
-                "category": category,
-                "time_range": time_range,
+                "query": params.query,
+                "category": params.category,
+                "time_range": params.time_range,
                 "results": results,
                 "total_found": len(results),
             }
@@ -74,4 +70,4 @@ class WebSearch(BaseModule):
             return resp
 
         except Exception as e:
-            return {"error": str(e), "query": query}
+            return {"error": str(e), "query": params.query}
