@@ -1,10 +1,10 @@
-import httpx
-
 from typing import Literal
-from pydantic import Field
-from demon_cry_base import BaseModule, ModuleConfig, ModuleParameters
 
-class WebSearchParams(ModuleParameters):
+import httpx
+from demon_cry_base import BasePlugin, PluginConfig, PluginParameters
+from pydantic import Field
+
+class WebSearchParams(PluginParameters):
     query: str = Field(description="Search query (supports Google dorks)")
     category: Literal["general", "images", "files", "it", "social media", "news"] = Field(
         default="general",
@@ -16,17 +16,21 @@ class WebSearchParams(ModuleParameters):
     )
 
 
-class WebSearchConfig(ModuleConfig):
+class WebSearchConfig(PluginConfig):
     searxng_url: str = "http://localhost:8080"
 
-class WebSearch(BaseModule):
+class WebSearch(BasePlugin):
     name = "web_search"
     description = "Search web via SearXNG. Supports Google dorks (site:, filetype:)"
     category = "search"
     config_model = WebSearchConfig
     parameters_model = WebSearchParams
 
-    async def execute(self, config: WebSearchConfig, params: WebSearchParams) -> dict:
+    async def execute(self, config: PluginConfig, params: PluginParameters) -> dict:
+        if not isinstance(config, WebSearchConfig):
+            config = WebSearchConfig.model_validate(config.model_dump())
+        if not isinstance(params, WebSearchParams):
+            params = WebSearchParams.model_validate(params.model_dump())
         try:
             request_params = {
                 "q": params.query,
